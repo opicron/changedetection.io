@@ -27,6 +27,30 @@ class difference_detection_processor():
         # Generic fetcher that should be extended (requests, playwright etc)
         self.fetcher = Fetcher()
 
+    def _get_request_settings_with_tag_overrides(self):
+        """Get request settings, applying tag overrides if enabled"""
+        request_settings = {
+            'headers': self.watch.get('headers', {}),
+            'body': self.watch.get('body', ''),  
+            'method': self.watch.get('method', 'GET'),
+            'ignore_status_codes': self.watch.get('ignore_status_codes', False),
+            'proxy': self.watch.get('proxy')
+        }
+        
+        # Check for tag overrides
+        for tag_uuid in self.watch.get('tags', []):
+            tag = self.datastore.data['settings']['application']['tags'].get(tag_uuid, {})
+            if tag.get('request_overrides_watch'):
+                tag_request_settings = tag.get('request_settings', {})
+                # Only override non-empty values
+                for key, value in tag_request_settings.items():
+                    if value:  # Only override if tag has a value
+                        request_settings[key] = value
+                logger.info(f"Watch {self.watch.get('uuid')} - Tag '{tag.get('title')}' selected for request settings override")
+                break
+        
+        return request_settings
+
     async def call_browser(self, preferred_proxy_id=None):
 
         from requests.structures import CaseInsensitiveDict
@@ -43,9 +67,12 @@ class difference_detection_processor():
         # Requests, playwright, other browser via wss:// etc, fetch_extra_something
         prefer_fetch_backend = self.watch.get('fetch_backend', 'system')
 
-        # Proxy ID "key"
-        preferred_proxy_id = preferred_proxy_id if preferred_proxy_id else self.datastore.get_preferred_proxy_for_watch(
-            uuid=self.watch.get('uuid'))
+        # Proxy ID "key" - check for tag override first
+        if not preferred_proxy_id and request_settings.get('proxy'):
+            preferred_proxy_id = request_settings.get('proxy')
+        else:
+            preferred_proxy_id = preferred_proxy_id if preferred_proxy_id else self.datastore.get_preferred_proxy_for_watch(
+                uuid=self.watch.get('uuid'))
 
         # Pluggable content self.fetcher
         if not prefer_fetch_backend or prefer_fetch_backend == 'system':
@@ -110,11 +137,14 @@ class difference_detection_processor():
         from changedetectionio.jinja2_custom import render as jinja_render
         request_headers = CaseInsensitiveDict()
 
+        # Apply tag request overrides if enabled
+        request_settings = self._get_request_settings_with_tag_overrides()
+
         ua = self.datastore.data['settings']['requests'].get('default_ua')
         if ua and ua.get(prefer_fetch_backend):
             request_headers.update({'User-Agent': ua.get(prefer_fetch_backend)})
 
-        request_headers.update(self.watch.get('headers', {}))
+        request_headers.update(request_settings.get('headers', {}))
         request_headers.update(self.datastore.get_all_base_headers())
         request_headers.update(self.datastore.get_all_headers_in_textfile_for_watch(uuid=self.watch.get('uuid')))
 
@@ -129,12 +159,12 @@ class difference_detection_processor():
 
         timeout = self.datastore.data['settings']['requests'].get('timeout')
 
-        request_body = self.watch.get('body')
+        request_body = request_settings.get('body')
         if request_body:
-            request_body = jinja_render(template_str=self.watch.get('body'))
+            request_body = jinja_render(template_str=request_body)
 
-        request_method = self.watch.get('method')
-        ignore_status_codes = self.watch.get('ignore_status_codes', False)
+        request_method = request_settings.get('method')
+        ignore_status_codes = request_settings.get('ignore_status_codes', False)
 
         # Configurable per-watch or global extra delay before extracting text (for webDriver types)
         system_webdriver_delay = self.datastore.data['settings']['application'].get('webdriver_delay', None)

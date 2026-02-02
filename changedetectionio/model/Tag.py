@@ -8,6 +8,7 @@ class model(watch_base):
         super(model, self).__init__(*arg, **kw)
 
         self['overrides_watch'] = kw.get('default', {}).get('overrides_watch')
+        self['request_overrides_watch'] = kw.get('default', {}).get('request_overrides_watch')
 
         if kw.get('default'):
             self.update(kw['default'])

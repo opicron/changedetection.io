@@ -29,6 +29,7 @@
             {% if extra_tab_content %}
             <li class="tab"><a href="#extras_tab">{{ extra_tab_content }}</a></li>
             {% endif %}
+            <li class="tab"><a href="#request">{{ _('Request') }}</a></li>
             <li class="tab"><a href="#notifications">{{ _('Notifications') }}</a></li>
         </ul>
     </div>
@@ -61,6 +62,25 @@
             {{ extra_form_content|safe }}
             </div>
         {% endif %}
+        
+            <div class="tab-pane-inner" id="request">
+                {% if request_form_content %}
+                    {{ request_form_content|safe }}
+                {% else %}
+                    <fieldset id="request-fieldset-group">
+                        <div class="pure-control-group">
+                            {{ render_checkbox_field(request_form.request_overrides_watch) }}
+                            <span class="pure-form-message-inline">{{ _('When enabled, these request settings will override watch-specific settings for all watches in this tag/group') }}</span>
+                        </div>
+                        
+                        <!-- Request form fields temporarily removed for testing -->
+                        <div class="pure-control-group">
+                            <p><em>Request form fields (headers, method, body, proxy, etc.) will be added here once RequestSettingsForm is restored.</em></p>
+                        </div>
+                    </fieldset>
+                {% endif %}
+            </div>
+            
             <div class="tab-pane-inner" id="notifications">
                 <fieldset>
                     <div  class="pure-control-group inline-radio">

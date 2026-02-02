@@ -17,7 +17,7 @@ def construct_blueprint(datastore: ChangeDetectionStore, update_q, queuedWatchMe
     def _watch_has_tag_options_set(watch):
         """This should be fixed better so that Tag is some proper Model, a tag is just a Watch also"""
         for tag_uuid, tag in datastore.data['settings']['application'].get('tags', {}).items():
-            if tag_uuid in watch.get('tags', []) and (tag.get('include_filters') or tag.get('subtractive_selectors')):
+            if tag_uuid in watch.get('tags', []) and (tag.get('include_filters') or tag.get('subtractive_selectors') or tag.get('overrides_watch') or tag.get('request_overrides_watch')):
                 return True
 
     @edit_blueprint.route("/edit/<string:uuid>", methods=['GET', 'POST'])

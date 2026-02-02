@@ -1,14 +1,16 @@
 from wtforms import (
     BooleanField,
     validators,
-    FloatField
+    FloatField,
+    SelectField,
+    TextAreaField
 )
 from wtforms.fields.choices import RadioField
 from wtforms.fields.form import FormField
 from wtforms.form import Form
 from flask_babel import lazy_gettext as _l
 
-from changedetectionio.forms import processor_text_json_diff_form
+from changedetectionio.forms import processor_text_json_diff_form, StringDictKeyValue, valid_method, default_method
 
 
 class RestockSettingsForm(Form):
@@ -29,6 +31,75 @@ class RestockSettingsForm(Form):
     ], render_kw={"placeholder": "0%", "size": "5"})
 
     follow_price_changes = BooleanField(_l('Follow price changes'), default=True)
+
+
+class RequestSettingsForm(Form):
+    """Base form for request-specific settings"""
+    headers = StringDictKeyValue('Request headers')
+    body = TextAreaField(_l('Request body'), [validators.Optional()])
+    method = SelectField(_l('Request method'), choices=valid_method, default=default_method)
+    ignore_status_codes = BooleanField(_l('Ignore status codes (process non-2xx status codes as normal)'), default=False)
+    proxy = RadioField(_l('Proxy'))
+
+
+class request_settings_form(processor_text_json_diff_form):
+    request_settings = FormField(RequestSettingsForm)
+
+    def extra_tab_content(self):
+        return _l('Request Settings')
+
+    def extra_form_content(self):
+        output = ""
+
+        if getattr(self, 'watch', None) and getattr(self, 'datastore'):
+            for tag_uuid in self.watch.get('tags'):
+                tag = self.datastore.data['settings']['application']['tags'].get(tag_uuid, {})
+                if tag.get('request_overrides_watch'):
+                    # @todo - Quick and dirty, cant access 'url_for' here because its out of scope somehow
+                    output = f"""<p><strong>Note! A Group tag overrides the request settings here.</strong></p><style>#request-fieldset-group {{ opacity: 0.6; }}</style>"""
+
+        output += """
+        {% from '_helpers.html' import render_field, render_checkbox_field, render_button %}
+        <script>        
+            $(document).ready(function () {
+                toggleOpacity('#request_overrides_watch', '#request-fieldset-group', true);
+            });
+        </script>
+
+        <fieldset id="request-fieldset-group">
+            <div class="pure-control-group">
+                <fieldset class="pure-group">
+                    {{ render_field(form.request_settings.headers, rows=7, placeholder="Example
+Cookie: foobar
+User-Agent: wonderbra 1.0") }}
+                    <div class="pure-form-message">Variables are supported in the request header values</div>
+                </fieldset>
+                <fieldset class="pure-group">
+                    {{ render_field(form.request_settings.method) }}
+                </fieldset>
+                <fieldset class="pure-group">
+                    {{ render_field(form.request_settings.body, rows=7, placeholder="Example
+{
+   \\"name\\":\\"John\\",
+   \\"age\\":30,
+   \\"car\\":null
+}") }}
+                    <div class="pure-form-message">Variables are supported in the request body</div>
+                </fieldset>
+                <fieldset class="pure-group">
+                    {{ render_checkbox_field(form.request_settings.ignore_status_codes) }}
+                </fieldset>
+                {% if form.request_settings.proxy %}
+                <fieldset class="pure-group inline-radio">
+                    {{ render_field(form.request_settings.proxy, class="fetch-backend-proxy") }}
+                    <span class="pure-form-message-inline">Choose a proxy for this request</span>
+                </fieldset>
+                {% endif %}
+            </div>
+        </fieldset>
+        """
+        return output
+
 
 class processor_settings_form(processor_text_json_diff_form):
     restock_settings = FormField(RestockSettingsForm)

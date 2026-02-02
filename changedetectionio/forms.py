@@ -841,7 +841,16 @@ class processor_text_json_diff_form(commonSettingsForm):
         return None
 
     def extra_form_content(self):
-        return None
+        output = ""
+        
+        if getattr(self, 'watch', None) and getattr(self, 'datastore'):
+            for tag_uuid in self.watch.get('tags', []):
+                tag = self.datastore.data['settings']['application']['tags'].get(tag_uuid, {})
+                if tag.get('request_overrides_watch'):
+                    # Show warning that request settings are overridden by tag
+                    output = f"""<p><strong>Note! A Group tag overrides the request settings (headers, body, method, proxy) here.</strong></p><style>.tab-pane-inner#request {{ opacity: 0.6; }}</style>"""
+        
+        return output
 
     def validate(self, **kwargs):
         if not super().validate():

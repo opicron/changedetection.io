@@ -6,10 +6,15 @@ from wtforms import (
 )
 from wtforms.fields.simple import BooleanField
 
-from changedetectionio.processors.restock_diff.forms import processor_settings_form as restock_settings_form
+from changedetectionio.processors.restock_diff.forms import processor_settings_form as restock_settings_form, RestockSettingsForm, request_settings_form
+
 
 class group_restock_settings_form(restock_settings_form):
-    overrides_watch = BooleanField('Activate for individual watches in this tag/group?', default=False)
+    overrides_watch = BooleanField('Activate restock & price settings for individual watches in this tag/group?', default=False)
+
+
+class group_request_settings_form(request_settings_form):
+    request_overrides_watch = BooleanField('Activate request settings for individual watches in this tag/group?', default=False)
 
 class SingleTag(Form):
 
