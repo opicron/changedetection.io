@@ -3,6 +3,7 @@ from babel.numbers import parse_decimal
 from changedetectionio.model.Watch import model as BaseWatch
 from typing import Union
 import re
+from loguru import logger
 
 # Processor capabilities
 supports_visual_selector = True
@@ -79,6 +80,27 @@ class Watch(BaseWatch):
     def extra_notification_token_values(self):
         values = super().extra_notification_token_values()
         values['restock'] = self.get('restock', {})
+        
+        # Add restock token values using the corrected datastore access pattern
+        restock_settings = self.get('restock_settings', {}) or {}
+        watch_uuid = self.get('uuid', 'Unknown')
+        
+        # _datastore is the __data dict, not the full store object 
+        if hasattr(self, '_datastore') and self._datastore:
+            watch_tags = self.get('tags', [])
+            
+            for tag_uuid in watch_tags:
+                tag_info = self._datastore.get('settings', {}).get('application', {}).get('tags', {}).get(tag_uuid, {})
+                if tag_info.get('overrides_watch') and tag_info.get('restock_settings'):
+                    tag_title = tag_info.get('title', 'Unknown')
+                    restock_settings = tag_info.get('restock_settings', {})
+                    logger.info(f"Watch {watch_uuid} - Tag '{tag_title}' overriding restock notification tokens: price_change_max={restock_settings.get('price_change_max')}, price_change_min={restock_settings.get('price_change_min')}, price_change_threshold_percent={restock_settings.get('price_change_threshold_percent')}")
+                    break
+        
+        values['price_change_max'] = restock_settings.get('price_change_max')
+        values['price_change_min'] = restock_settings.get('price_change_min')
+        values['price_change_threshold_percent'] = restock_settings.get('price_change_threshold_percent')
+        
         return values
 
     def extra_notification_token_placeholder_info(self):
@@ -87,5 +109,9 @@ class Watch(BaseWatch):
         values.append(('restock.price', "Price detected"))
         values.append(('restock.original_price', "Original price at first check"))
 
-        return values
+        # Add restock_settings descriptions
+        values.append(('price_change_max', "Above price change to trigger notification"))
+        values.append(('price_change_min', "Below price change to trigger notification"))
+        values.append(('price_change_threshold_percent', "Price threshold to trigger notification"))
 
+        return values
