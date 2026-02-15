@@ -195,7 +195,7 @@ class Tag(Resource):
             update_data = {k: v for k, v in json_data.items() if k != 'title'}
             if update_data:
                 tag.update(update_data)
-                self.datastore.needs_write_urgent = True
+                tag.commit()
                 
             return {'uuid': new_uuid}, 201
         else:
