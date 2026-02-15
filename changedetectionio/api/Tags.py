@@ -172,7 +172,6 @@ class Tag(Resource):
     @validate_openapi_request('createTag')
     def post(self):
         """Create a single tag/group."""
-
         json_data = request.get_json()
         title = json_data.get("title",'').strip()
 
@@ -186,8 +185,18 @@ class Tag(Resource):
         if unknown_fields:
             return f"Unknown field(s): {', '.join(sorted(unknown_fields))}", 400
 
+        # Create the new tag with basic properties
         new_uuid = self.datastore.add_tag(title=title)
         if new_uuid:
+            # If additional properties were provided, update the tag with them
+            tag = self.datastore.data['settings']['application']['tags'][new_uuid]
+            
+            # Update with all provided properties (excluding title which was already set)
+            update_data = {k: v for k, v in json_data.items() if k != 'title'}
+            if update_data:
+                tag.update(update_data)
+                self.datastore.needs_write_urgent = True
+                
             return {'uuid': new_uuid}, 201
         else:
             return "Invalid or unsupported tag", 400
@@ -207,7 +216,9 @@ class Tags(Resource):
                 'date_created': tag.get('date_created', 0),
                 'notification_muted': tag.get('notification_muted', False),
                 'title': tag.get('title', ''),
-                'uuid': tag.get('uuid')
+                'uuid': tag.get('uuid'),
+                'overrides_watch': tag.get('overrides_watch', False),
+                'restock_settings': tag.get('restock_settings', {})
             }
 
         return result, 200
