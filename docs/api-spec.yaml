@@ -598,6 +598,22 @@ components:
                   description: Threshold in percentage for price changes since the original price (0-100)
                   minimum: 0
                   maximum: 100
+            # Future: Aggregated statistics from all watches with this tag
+            # check_count:
+            #   type: integer
+            #   description: Sum of check_count from all watches with this tag
+            #   readOnly: true
+            #   x-computed: true
+            # last_checked:
+            #   type: integer
+            #   description: Most recent last_checked timestamp from all watches with this tag
+            #   readOnly: true
+            #   x-computed: true
+            # last_changed:
+            #   type: integer
+            #   description: Most recent last_changed timestamp from all watches with this tag
+            #   readOnly: true
+            #   x-computed: true
 
     CreateTag:
       allOf:
