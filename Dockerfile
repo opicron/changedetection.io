@@ -141,7 +141,7 @@ WORKDIR /app
 
 # Copy and set up entrypoint script for installing extra packages
 COPY docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
+RUN sed -i 's/\r$//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh
 
 # Set entrypoint to handle EXTRA_PACKAGES env var
 ENTRYPOINT ["/docker-entrypoint.sh"]

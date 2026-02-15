@@ -623,6 +623,10 @@ class perform_site_check(difference_detection_processor):
                         else:
                             logger.trace(f"{watch.get('uuid')} {price} is between {min_limit} and {max_limit}, continuing normal comparison")
 
+                        #RZR HACK - THIS IS CORRECT (to show low prices on first run)
+                        if price is not None and min_limit and price < min_limit and watch.history_n == 0:
+                            changed_detected = True
+                            
                     # Price comparison by %
                     if watch['restock'].get('original_price') and changed_detected and restock_settings.get('price_change_threshold_percent'):
                         previous_price = float(watch['restock'].get('original_price'))
